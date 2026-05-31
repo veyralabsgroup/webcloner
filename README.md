@@ -1,6 +1,6 @@
-# WebCloner — Website Visual Cloning Skill for Claude Code
+# webcloner
 
-Clone any landing page, marketing site, portfolio, or ecommerce storefront into a pixel-accurate Next.js replica.
+Clone any landing page, marketing site, portfolio, or ecommerce storefront into a pixel-accurate Next.js replica. Works with Claude Code and other AI coding agents.
 
 ```bash
 npx @veyralabs/skills install webcloner
@@ -8,108 +8,99 @@ npx @veyralabs/skills install webcloner
 
 ---
 
-## What it does
+## How it works
 
-**WebCloner** is a Claude Code skill that guides you through a structured 6-phase process to clone any website's visual design:
+Most cloning attempts fail at 80% because they guess at interactions, miss assets, or start writing components before fully understanding what they're building. This skill forces the right order.
 
-1. **Recon** — Extract DOM structure, computed CSS, assets, and animation libraries automatically via Scrapling
-2. **Foundation** — Set up Next.js with exact color tokens, typography, and downloaded assets
-3. **Spec** — Generate machine-readable specs for each section before writing any component code
-4. **Parallel Build** — Dispatch builder agents per section using git worktrees
-5. **Assembly** — Wire all sections into the final page with page-level behaviors
-6. **Visual QA** — Screenshot comparison between original and clone at desktop + mobile
+Six phases, each with a clear goal:
+
+**Phase 1 — Recon.** Run `extract.py` against the target URL. Scrapling loads the full page, scrolls to trigger lazy loads, and extracts the DOM structure, computed CSS for every visible element, asset inventory, color palette, typography system, animation library signatures, and tech stack. Output is a single JSON manifest.
+
+**Phase 2 — Foundation.** Set up the Next.js project and apply global tokens from the manifest before touching any component: fonts, color variables, typography scale, animation libraries, downloaded assets converted to WebP.
+
+**Phase 3 — Spec.** Generate a machine-readable spec file for each section of the page. Every spec includes the DOM structure, exact computed CSS values, responsive behavior at four breakpoints, YAML-formatted interaction definitions, and verbatim text content. No building happens until all specs are complete and reviewed.
+
+**Phase 4 — Parallel build.** Each section gets its own git worktree and builder agent. Agents work simultaneously and build exactly what the spec describes. After each merge, `npm run build` runs to catch TypeScript errors before they compound.
+
+**Phase 5 — Assembly.** Wire all section components into `page.tsx` in DOM order. Implement page-level behaviors: sticky header, smooth scroll provider, GSAP context, scroll progress indicators.
+
+**Phase 6 — Visual QA.** `compare.mjs` screenshots the original and the clone at 1440px and 390px. Side-by-side comparison, size diff report, manual checklist for typography, spacing, interactions, and responsive behavior.
 
 ---
 
-## Scope
+## What it handles
 
-**Works well for:**
-- Landing pages
-- Marketing sites
-- Portfolio sites
-- Ecommerce storefronts (product listings, product pages)
-- Agency / studio sites
+Landing pages, marketing sites, portfolios, agency sites, ecommerce product listings and storefronts.
 
-**Not designed for:**
-- SaaS dashboards or admin panels
-- Apps with authentication flows
-- Sites with real-time data (live prices, WebSockets)
-- Checkout + payment flows
+Not designed for SaaS dashboards, admin panels, auth flows, real-time data, or checkout flows. If the target is out of scope, the skill says so before starting rather than producing a broken half-clone.
 
 ---
 
 ## Prerequisites
 
 ```bash
-# Python 3.10+ with Scrapling
 pip install scrapling
 scrapling install
 
-# Node 18+
-node --version
+node --version  # 18+
 ```
 
 ---
 
-## Installation
+## Install
 
 ```bash
-# Via veyraskills CLI
 npx @veyralabs/skills install webcloner
-
-# Or clone this repo and copy to .claude/skills/
-git clone https://github.com/veyralabsgroup/webcloner
-cp -r webcloner/. .claude/skills/webcloner/
 ```
+
+Manual install — copy to your agent's skills directory:
+
+| Agent | Path |
+|-------|------|
+| Claude Code | `.claude/skills/` |
+| Cursor | `.cursor/skills/` |
+| Windsurf | `.windsurf/skills/` |
+| Gemini CLI | `.gemini/skills/` |
 
 ---
 
 ## Usage
 
-Once installed, activate in any Claude Code session:
+Once installed, describe what you want:
 
-```
-/webcloner https://example.com
-```
-
-Or describe what you want:
 ```
 Clone this landing page: https://example.com
+Rebuild this design in Next.js: https://example.com
+I want my site to look like this: https://example.com
 ```
 
-Claude will guide you through the full process, asking only when a decision requires your input.
+The skill activates automatically. It will ask for your input at two points: after the recon summary (confirm scope and interaction model decisions) and after visual QA (approve or request fixes).
 
 ---
 
-## Included
+## What's included
 
 ```
-SKILL.md                          ← skill definition (loaded by Claude Code)
+SKILL.md                         skill definition loaded by Claude Code
 scripts/
-  extract.py                      ← Scrapling-based site manifest extractor
-  download-assets.mjs             ← image/video/font downloader with WebP conversion
-  compare.mjs                     ← visual regression: screenshot original vs clone
+  extract.py                     Scrapling extractor — DOM, CSS, assets, animations
+  download-assets.mjs            image/video/font downloader with WebP conversion
+  compare.mjs                    screenshot original vs clone at desktop and mobile
 references/
-  animation-playbook.md           ← GSAP, Framer Motion, Lenis, AOS recreation guide
-  behavior-spec-format.md         ← YAML schema for interactive behavior specs
-  component-detection.md          ← boundary detection algorithm
-  stack-presets.md                ← Astro, Nuxt, SvelteKit, Vite output configs
+  animation-playbook.md          GSAP, Framer Motion, Lenis, AOS detection and recreation
+  behavior-spec-format.md        YAML schema for interaction specs with examples
+  component-detection.md         boundary detection algorithm and complexity scoring
+  stack-presets.md               output configs for Astro, Nuxt, SvelteKit, Vite
 ```
 
 ---
 
 ## Part of VeyraSkills
 
-This skill is part of the [VeyraSkills](https://github.com/veyralabsgroup/veyraskills) collection — a curated set of Claude Code skills for founders, developers, and AI builders.
-
-```bash
-# Install all VeyraSkills
-npx @veyralabs/skills install naming-suite
-npx @veyralabs/skills install webcloner
-```
+Part of [VeyraSkills](https://github.com/veyralabsgroup/veyraskills), a collection of Claude Code skills for founders, developers, and builders.
 
 ---
 
 ## License
 
-MIT
+MIT. Built by [VeyraLabs](https://veyralabs.com).
