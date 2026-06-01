@@ -14,17 +14,17 @@ Most cloning attempts fail at 80% because they guess at interactions, miss asset
 
 Six phases, each with a clear goal:
 
-**Phase 1 — Recon.** Run `extract.py` against the target URL. Scrapling loads the full page, scrolls to trigger lazy loads, and extracts the DOM structure, computed CSS for every visible element, asset inventory, color palette, typography system, animation library signatures, and tech stack. Output is a single JSON manifest.
+**Phase 1 - Recon.** Run `extract.py` against the target URL. Scrapling loads the full page, scrolls to trigger lazy loads, and extracts the DOM structure, computed CSS for every visible element, asset inventory, color palette, typography system, animation library signatures, and tech stack. Output is a single JSON manifest.
 
-**Phase 2 — Foundation.** Set up the Next.js project and apply global tokens from the manifest before touching any component: fonts, color variables, typography scale, animation libraries, downloaded assets converted to WebP.
+**Phase 2 - Foundation.** Set up the Next.js project and apply global tokens from the manifest before touching any component: fonts, color variables, typography scale, animation libraries, downloaded assets converted to WebP.
 
-**Phase 3 — Spec.** Generate a machine-readable spec file for each section of the page. Every spec includes the DOM structure, exact computed CSS values, responsive behavior at four breakpoints, YAML-formatted interaction definitions, and verbatim text content. No building happens until all specs are complete and reviewed.
+**Phase 3 - Spec.** Generate a machine-readable spec file for each section of the page. Every spec includes the DOM structure, exact computed CSS values, responsive behavior at four breakpoints, YAML-formatted interaction definitions, and verbatim text content. No building happens until all specs are complete and reviewed.
 
-**Phase 4 — Parallel build.** Each section gets its own git worktree and builder agent. Agents work simultaneously and build exactly what the spec describes. After each merge, `npm run build` runs to catch TypeScript errors before they compound.
+**Phase 4 - Parallel build.** Each section gets its own git worktree and builder agent. Agents work simultaneously and build exactly what the spec describes. After each merge, `npm run build` runs to catch TypeScript errors before they compound.
 
-**Phase 5 — Assembly.** Wire all section components into `page.tsx` in DOM order. Implement page-level behaviors: sticky header, smooth scroll provider, GSAP context, scroll progress indicators.
+**Phase 5 - Assembly.** Wire all section components into `page.tsx` in DOM order. Implement page-level behaviors: sticky header, smooth scroll provider, GSAP context, scroll progress indicators.
 
-**Phase 6 — Visual QA.** `compare.mjs` screenshots the original and the clone at 1440px and 390px. Side-by-side comparison, size diff report, manual checklist for typography, spacing, interactions, and responsive behavior.
+**Phase 6 - Visual QA.** `compare.mjs` screenshots the original and the clone at 1440px and 390px. Side-by-side comparison, size diff report, manual checklist for typography, spacing, interactions, and responsive behavior.
 
 ---
 
@@ -53,7 +53,7 @@ node --version  # 18+
 npx @veyralabs/skills install webcloner
 ```
 
-Manual install — copy to your agent's skills directory:
+Manual install - copy to your agent's skills directory:
 
 | Agent | Path |
 |-------|------|
@@ -83,7 +83,7 @@ The skill activates automatically. It will ask for your input at two points: aft
 ```
 SKILL.md                         skill definition loaded by Claude Code
 scripts/
-  extract.py                     Scrapling extractor — DOM, CSS, assets, animations
+  extract.py                     Scrapling extractor - DOM, CSS, assets, animations
   download-assets.mjs            image/video/font downloader with WebP conversion
   compare.mjs                    screenshot original vs clone at desktop and mobile
 references/
