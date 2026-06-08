@@ -545,6 +545,127 @@ Fix deviations one section at a time, rebuilding after each batch.
 
 ---
 
+## Phase 7 — Visual Feedback Loop
+
+**Goal:** Reduce visual diff to PASS (<5%) using vision-guided patches. Enter this phase only if Phase 6 QA reports WARN or FAIL on any viewport.
+
+This is what separates 80% clones from 95%+ clones. You have a diff image with red pixels — use it.
+
+### 7.1 — Read the QA report
+
+```bash
+cat docs/qa/report.json
+```
+
+Check `verdict` and `diffPct` per viewport. If all are PASS — skip this phase entirely.
+
+Record starting state:
+```
+Iteration 0 (baseline): desktop X.X% [VERDICT], mobile X.X% [VERDICT]
+```
+
+### 7.2 — Read the diff images visually
+
+Open `docs/qa/diff-desktop.png` and `docs/qa/diff-mobile.png` using your vision capability.
+
+Red pixels = pixels that differ between original and clone. Denser red = larger difference.
+
+**Spatial mapping — what red regions mean:**
+
+| Region of image | Likely section |
+|----------------|----------------|
+| Top 8-12% | Header / nav |
+| Next 20-35% | Hero |
+| Middle sections | Features, pricing, testimonials |
+| Bottom 10-15% | Footer |
+| Uniform red scatter everywhere | Systematic issue — wrong font, wrong base color, wrong line-height |
+| Red only in specific columns | Grid / flex alignment off |
+| Red outline around elements | Wrong border-radius, border-color, or box-shadow |
+| Red at element edges | Wrong padding or margin |
+
+### 7.3 — Diagnose before patching
+
+For each red region, cross-reference:
+
+1. Open `docs/qa/styles.json` → `elements` section for the affected element type
+2. Open the corresponding component file in `src/components/sections/`
+3. Find the specific CSS value that differs
+
+Ask: is this one-off or systematic?
+- **Systematic** (affects many elements uniformly): fix global tokens in `globals.css` first
+- **One-off** (single element): patch the specific component
+
+Common root causes ranked by frequency:
+1. Wrong font-size on hero headline (most common — looks huge in diff)
+2. Wrong background color on a section (bright red block)
+3. Wrong padding/gap on a grid container (layout collapse)
+4. Wrong font-weight (subtle but adds up)
+5. Missing box-shadow on cards
+6. Wrong letter-spacing on headings
+7. Wrong border-radius on buttons/cards
+
+### 7.4 — Generate targeted patches
+
+**Rule: surgical fixes only. No full component rewrites.**
+
+Bad:
+```
+Rewrite the entire Hero component
+```
+
+Good:
+```
+In src/components/sections/Hero.tsx line 23:
+  change text-[52px] → text-[64px]
+  change leading-[1.2] → leading-[1.05]
+  change tracking-normal → tracking-[-0.02em]
+```
+
+Fix one category at a time. Systematic issues first, then section-specific.
+
+Reference `docs/qa/styles.json` → `typography_scale.font_sizes` for exact px values.
+Reference `docs/qa/styles.json` → `color_palette` for exact color values.
+Reference `docs/qa/styles.json` → `spacing_scale` for exact padding/gap values.
+
+### 7.5 — Re-run comparison
+
+After applying patches:
+
+```bash
+node scripts/compare.mjs <original-url> <clone-url>
+```
+
+Read `docs/qa/report.json`. Record the new diff%:
+```
+Iteration 1: desktop X.X% [VERDICT], mobile X.X% [VERDICT]  [fixed: ...]
+```
+
+### 7.6 — Iterate
+
+Repeat 7.2 → 7.5. Stop when:
+- All viewports PASS (diffPct < threshold%), **or**
+- 5 iterations completed, **or**
+- Less than 1% improvement between two consecutive iterations (diminishing returns)
+
+**Iteration log template:**
+```
+Iteration 0: desktop 22.4% FAIL,  mobile 28.1% FAIL
+Iteration 1: desktop 14.2% WARN,  mobile 18.7% WARN   [fixed: hero font-size, h2 line-height]
+Iteration 2: desktop  8.3% WARN,  mobile 10.1% WARN   [fixed: features grid gap, card border-radius]
+Iteration 3: desktop  4.9% PASS,  mobile  6.2% WARN   [fixed: footer padding, nav letter-spacing]
+Iteration 4: desktop  3.1% PASS,  mobile  4.4% PASS   DONE
+```
+
+### 7.7 — Final QA report
+
+When loop completes, report to the user:
+- Starting diff% vs final diff% per viewport
+- Total iterations run
+- What was fixed in each iteration
+- Remaining deviations that resisted fixing (and why — animation, font not available, dynamic content)
+
+---
+
 ## Update Mode
 
 When a section of an existing clone needs refreshing:
