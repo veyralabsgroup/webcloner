@@ -97,7 +97,27 @@ This produces `docs/site-manifest.json` with:
 - Detected breakpoints
 - Animation library signatures
 
-### 1.2 — Take screenshots
+### 1.2 — Extract computed styles and design tokens
+
+Run `scripts/extract-styles.mjs` to capture exact CSS values post-cascade — not raw CSS text, but the final computed values the browser actually applies:
+
+```bash
+node scripts/extract-styles.mjs <url> --out docs/qa/styles.json
+```
+
+This produces `docs/qa/styles.json` with:
+- **CSS custom properties** from `:root` (design system variables if the site uses them)
+- **Color palette** — all unique colors ranked by frequency (background, text, border)
+- **Typography scale** — exact font sizes in px, families, weights, line-heights
+- **Spacing scale** — exact padding, margin, gap values used across the page
+- **Border radius scale** — all unique radii
+- **Shadow scale** — all unique box-shadow values
+- **Layout patterns** — grid-template-columns per container, flex configs
+- **Per-element computed styles** — h1, h2, p, button, nav, header, footer with every layout property
+
+Feed `docs/qa/styles.json` into Phase 3 specs instead of guessing values. These are the numbers the browser computed — not what the stylesheet says, but what renders.
+
+### 1.3 — Take screenshots
 
 Using Chrome MCP or Playwright:
 
@@ -227,7 +247,7 @@ npx shadcn@latest init
 
 ### 2.2 — Apply global tokens from manifest
 
-From `docs/site-manifest.json`:
+From `docs/qa/styles.json` (computed styles — prefer these over manifest for exact values) and `docs/site-manifest.json`:
 
 **Fonts** — update `app/layout.tsx`:
 ```typescript
@@ -325,7 +345,7 @@ For each section, create `docs/specs/[section-name].spec.md`:
 [describe exact HTML structure — tag names, nesting, text content verbatim]
 
 ## Computed Styles
-[from manifest — exact CSS property values for key elements]
+[from docs/qa/styles.json → elements — exact post-cascade values, not raw CSS]
 - Container: max-width: 1200px, padding: 0 80px, background: #fff
 - Headline: font-size: 64px, font-weight: 700, line-height: 1.1, letter-spacing: -0.02em
 - ...
