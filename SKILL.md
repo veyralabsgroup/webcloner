@@ -313,13 +313,13 @@ Zero errors before any component work. Fix TypeScript config issues now.
 
 ---
 
-## Phase 3 — Component Specification
+## Phase 3 — Component Specification (Multi-Agent)
 
-**Goal:** Produce a complete spec for each section before dispatching any builder agent.
+**Goal:** Produce a complete, high-accuracy spec per section by dispatching 5 parallel dimension agents — each a specialist. One agent guessing at everything misses details. Five specialists each reading the same data through a different lens catch what a generalist skips.
 
-### 3.1 — Component boundary detection
+### 3.0 — Component boundary detection
 
-From `docs/site-manifest.json` → `sections`, identify boundaries:
+From `docs/site-manifest.json` → `sections`, identify boundaries before dispatching:
 
 **Heuristics:**
 - Full-width containers with distinct background = new section
@@ -331,70 +331,292 @@ From `docs/site-manifest.json` → `sections`, identify boundaries:
 Common mistake: splitting one logical component into many because the DOM is deeply nested.
 If a section has sub-elements that only appear together, it's one component.
 
-### 3.2 — Write spec file for each section
-
-For each section, create `docs/specs/[section-name].spec.md`:
-
-```markdown
-# [Section Name] — Spec
-
-## Screenshot
-[attach section screenshot from docs/screenshots/desktop.png — crop]
-
-## DOM Structure
-[describe exact HTML structure — tag names, nesting, text content verbatim]
-
-## Computed Styles
-[from docs/qa/styles.json → elements — exact post-cascade values, not raw CSS]
-- Container: max-width: 1200px, padding: 0 80px, background: #fff
-- Headline: font-size: 64px, font-weight: 700, line-height: 1.1, letter-spacing: -0.02em
-- ...
-
-## Responsive Behavior
-| Breakpoint | Changes |
-|------------|---------|
-| 1440px | [baseline] |
-| 1024px | [what changes] |
-| 768px | [what changes] |
-| 390px | [what changes] |
-
-## States & Behaviors
-[Structured YAML — see references/behavior-spec-format.md]
-
-behaviors:
-  - name: "Tab switch"
-    trigger:
-      type: click
-      selector: ".tab-button"
-    states:
-      default:
-        content: [tab 1 content]
-        activeTab: 0
-      tab-2:
-        content: [tab 2 content]
-        activeTab: 1
-    transition:
-      duration: 200ms
-      easing: ease-out
-
-## Assets Used
-- Hero background: public/images/hero-bg.webp
-- Feature icon 1: public/images/icon-speed.svg
-- ...
-
-## Content (verbatim)
-[Copy exact text from the site — do not paraphrase]
+List the sections. Example:
+```
+sections: [nav, hero, features, pricing, testimonials, cta, footer]
 ```
 
-**Spec quality checklist before dispatch:**
-- [ ] Screenshot attached or referenced
-- [ ] DOM structure described (not guessed)
+### 3.1 — Dispatch 5 parallel dimension agents
+
+For each section, spawn 5 sub-agents simultaneously using git worktrees or parallel Tasks.
+Each agent reads the same source data (`docs/qa/styles.json`, `docs/site-manifest.json`, screenshots)
+but analyzes a single dimension and writes its fragment to `docs/specs/[section]/[dimension].md`.
+
+```bash
+# Create spec output dirs
+mkdir -p docs/specs/{nav,hero,features,pricing,testimonials,cta,footer}
+```
+
+Dispatch all 5 agents per section in parallel. Do not wait for one before starting the next.
+
+---
+
+### Agent 1 — Layout Agent
+
+**Context to provide:**
+- `docs/qa/styles.json` → `layout_patterns` (grid containers, flex containers, display counts)
+- `docs/qa/styles.json` → `elements` (display, flexDirection, gridTemplateColumns, gap, maxWidth, position)
+- `docs/site-manifest.json` → sections DOM structure
+- Screenshot: `docs/screenshots/desktop.png`
+
+**Prompt template:**
+```
+You are a layout specialist. Analyze the [SectionName] section of this website clone.
+
+Data: [paste layout_patterns + elements.section from styles.json]
+Screenshot: [attach docs/screenshots/desktop.png]
+
+Produce docs/specs/[section]/layout.md with:
+
+## Layout Analysis — [SectionName]
+
+### Container
+- outer: max-width, padding, margin-auto
+- inner: display (flex/grid), direction, wrap
+
+### Grid / Flex Config
+- gridTemplateColumns (exact value, e.g. "repeat(3, 1fr)")
+- gap / row-gap / column-gap (exact px)
+- alignItems, justifyContent
+
+### Breakpoint Behavior
+| 1440px | 1024px | 768px | 390px |
+(describe columns → stack, nav → hamburger, etc.)
+
+### Z-index / Position
+- any sticky, fixed, absolute elements and their stacking
+
+### Anti-patterns to avoid
+- list what NOT to do based on what you see (e.g. "do not use fixed heights on cards")
+```
+
+---
+
+### Agent 2 — Typography Agent
+
+**Context to provide:**
+- `docs/qa/styles.json` → `typography_scale` (all font sizes, families, weights, line-heights)
+- `docs/qa/styles.json` → `css_custom_properties` (any --font-* variables)
+- `docs/qa/styles.json` → `elements` (h1, h2, h3, p, button, a computed font props)
+
+**Prompt template:**
+```
+You are a typography specialist. Analyze the [SectionName] section.
+
+Data: [paste typography_scale + relevant elements from styles.json]
+
+Produce docs/specs/[section]/typography.md with:
+
+## Typography — [SectionName]
+
+### Type Scale (exact computed values)
+| Element | font-size | font-weight | line-height | letter-spacing | font-family |
+|---------|-----------|-------------|-------------|----------------|-------------|
+| h1      | 64px      | 700         | 68px        | -0.02em        | Inter       |
+| ...     |           |             |             |                |             |
+
+### Font Families
+- Primary: [family name, weights used, fallback stack]
+- Mono (if any): [family name]
+
+### CSS Variables (if design system detected)
+- --font-sans: [value]
+- --text-lg: [value]
+
+### Responsive Type Changes
+- at 768px: h1 drops to [size]
+- at 390px: h1 drops to [size]
+
+### Text Treatments
+- any text-transform (uppercase CTAs, etc.)
+- any gradient text (background-clip: text)
+- any text-shadow
+```
+
+---
+
+### Agent 3 — Color Agent
+
+**Context to provide:**
+- `docs/qa/styles.json` → `color_palette` (all colors ranked by frequency)
+- `docs/qa/styles.json` → `css_custom_properties` (any --color-* variables)
+- `docs/qa/styles.json` → `elements` (color, backgroundColor, borderColor per element)
+
+**Prompt template:**
+```
+You are a color specialist. Analyze the [SectionName] section.
+
+Data: [paste color_palette + css_custom_properties + elements color props]
+
+Produce docs/specs/[section]/colors.md with:
+
+## Colors — [SectionName]
+
+### Palette
+| Role | Value | Used on |
+|------|-------|---------|
+| page background | #0F0F0F | body, most sections |
+| primary text | rgb(255,255,255) | all headings, body |
+| accent | #6366F1 | CTAs, highlights |
+| muted | rgb(156,163,175) | secondary text |
+| border | rgba(255,255,255,0.1) | card borders, dividers |
+
+### Backgrounds
+- section background: [exact value]
+- any gradient: [exact gradient string]
+- any background-image: [pattern, noise, mesh]
+
+### CSS Custom Properties
+- --background: [value]
+- --foreground: [value]
+- --primary: [value]
+(list all detected)
+
+### Dark / Light mode
+- does the site use prefers-color-scheme? [yes/no]
+- if yes, list overrides
+
+### Transparency / Blur
+- any backdrop-filter: blur() elements (frosted glass)?
+- any rgba() with <0.5 alpha?
+```
+
+---
+
+### Agent 4 — Spacing Agent
+
+**Context to provide:**
+- `docs/qa/styles.json` → `spacing_scale` (paddings, margins, gaps)
+- `docs/qa/styles.json` → `elements` (padding, margin, gap per element type)
+- `docs/qa/styles.json` → `css_custom_properties` (any --spacing-* variables)
+
+**Prompt template:**
+```
+You are a spacing specialist. Analyze the [SectionName] section.
+
+Data: [paste spacing_scale + elements spacing props]
+
+Produce docs/specs/[section]/spacing.md with:
+
+## Spacing — [SectionName]
+
+### Section Container
+- section padding (top/bottom): [value]
+- inner container max-width: [value]
+- inner container horizontal padding: [value]
+
+### Component Spacing
+| Component | padding | margin | gap |
+|-----------|---------|--------|-----|
+| card | 24px | 0 | — |
+| button | 12px 24px | — | — |
+
+### Spacing Scale Detected
+[list unique spacing values in ascending order — this is the design system's spacing scale]
+e.g. 4px, 8px, 12px, 16px, 24px, 32px, 48px, 64px, 80px, 96px
+
+### Responsive Spacing Changes
+- section padding at 768px: [value]
+- section padding at 390px: [value]
+- grid gap at mobile: [value]
+
+### Tailwind Mapping
+[map exact px values to Tailwind classes]
+- 16px → p-4
+- 24px → p-6
+- 80px → py-20
+```
+
+---
+
+### Agent 5 — Component Agent
+
+**Context to provide:**
+- `docs/site-manifest.json` → DOM structure for the section
+- `docs/qa/styles.json` → `elements` (class names, data attributes, ARIA roles)
+- Screenshot: `docs/screenshots/desktop.png`
+
+**Prompt template:**
+```
+You are a component detection specialist. Analyze the [SectionName] section.
+
+DOM data: [paste section DOM from manifest]
+Screenshot: [attach desktop screenshot]
+
+Produce docs/specs/[section]/components.md with:
+
+## Components — [SectionName]
+
+### Component Inventory
+List every distinct UI component in this section:
+| Component | Type | shadcn equivalent | Props needed |
+|-----------|------|-------------------|--------------|
+| Primary CTA | Button | Button variant="default" | label, href, size |
+| Feature card | Card | Card | icon, title, description |
+| Tab switcher | Tabs | Tabs | items[], defaultTab |
+
+### shadcn / Radix Detection
+[scan class names and data-* attributes for known signatures]
+- data-radix-* → Radix primitive detected
+- class="cmdk-*" → Command menu detected
+- class includes "vaul-*" → Drawer detected
+
+### Interaction States Needed
+For each interactive component, list ALL states:
+- Button: default, hover, active, focus, disabled, loading
+- Tab: default, active, hover
+- Card: default, hover (if clickable)
+
+### DOM Structure (verbatim)
+[describe nesting depth, key HTML tags, ARIA roles]
+Avoid guessing — only describe what you can see in the DOM data.
+
+### Content (verbatim)
+[copy all text content exactly — headlines, body, CTAs, labels]
+Do not paraphrase. If you cannot read text clearly, mark it [UNCLEAR].
+```
+
+---
+
+### 3.2 — Merge dimension outputs into section spec
+
+After all 5 agents complete, merge their outputs into `docs/specs/[section].spec.md`:
+
+```markdown
+# [SectionName] — Spec
+
+> Built from 5 dimension agents: Layout + Typography + Colors + Spacing + Components
+
+## Layout
+[paste layout.md content]
+
+## Typography
+[paste typography.md content]
+
+## Colors
+[paste colors.md content]
+
+## Spacing
+[paste spacing.md content]
+
+## Components & Content
+[paste components.md content]
+
+## Screenshot Reference
+docs/screenshots/desktop.png — [describe which region to look at]
+```
+
+### 3.3 — Spec quality checklist before dispatch to Phase 4
+
+- [ ] All 5 dimension fragments present and non-empty
+- [ ] Typography values are exact px (not rem/em — computed values only)
+- [ ] Colors are exact rgb()/hex (not CSS variable names alone)
+- [ ] Spacing scale listed in ascending order
+- [ ] All interactive states listed per component
 - [ ] All text content is verbatim (not paraphrased)
-- [ ] All states listed (hover, active, each tab, each accordion item)
-- [ ] Responsive behavior documented at all 4 breakpoints
+- [ ] Responsive changes documented at 1440, 1024, 768, 390
 - [ ] Assets reference downloaded files in `public/`, not original URLs
-- [ ] Interaction model decided (scroll-driven vs click-driven)
-- [ ] Behavior spec is YAML, not prose
+- [ ] Interaction model decided (scroll-driven vs click-driven) — document in Layout spec
 
 ---
 
