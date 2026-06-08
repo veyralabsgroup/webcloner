@@ -771,6 +771,27 @@ Fix deviations one section at a time, rebuilding after each batch.
 
 **Goal:** Reduce visual diff to PASS (<5%) using vision-guided patches. Enter this phase only if Phase 6 QA reports WARN or FAIL on any viewport.
 
+**Two modes — choose based on context:**
+
+| Mode | When to use | How |
+|------|-------------|-----|
+| Automated | `ANTHROPIC_API_KEY` available, want hands-free | `node scripts/visual-loop.mjs <original> <clone>` |
+| Manual | No API key, or want direct control | Follow steps 7.1–7.7 below |
+
+**Automated mode (recommended):**
+```bash
+# Runs compare → Claude Vision → patch → repeat until PASS
+node scripts/visual-loop.mjs <original-url> http://localhost:3000
+
+# Options
+node scripts/visual-loop.mjs <original> <clone> --threshold 5 --max-iterations 5 --components-dir src/components/sections
+```
+
+Output: `docs/qa/loop-log.json` — full iteration log, patches applied per round, diff% trajectory.
+Exit code 0 = all PASS, exit code 1 = FAIL remains after max iterations.
+
+If automated mode reaches max iterations without PASS, read `docs/qa/loop-log.json` to see what was tried, then continue manually from step 7.2.
+
 This is what separates 80% clones from 95%+ clones. You have a diff image with red pixels — use it.
 
 ### 7.1 — Read the QA report
