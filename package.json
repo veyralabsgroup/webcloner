@@ -1,6 +1,6 @@
 {
   "name": "@veyralabs/webcloner",
-  "version": "0.4.0",
+  "version": "1.0.0",
   "description": "WebCloner — Website visual cloning skill for Claude Code. Clone landing pages, marketing sites, portfolios, and ecommerce storefronts into pixel-accurate Next.js replicas.",
   "files": [
     "SKILL.md",
